@@ -10,7 +10,7 @@ interface Info {
   activeTime?: number;
 }
 
-const debug = true;
+const debug = process.env.DEBUG === 'true';
 const dist = 'output';
 const app = express();
 const PORT = 7677;
