@@ -16,6 +16,9 @@ const app = express();
 const PORT = 7677;
 const STREAM_DIR = path.resolve(`./${dist}`);
 
+const SHORT_TIMEOUT = 120000; // 新频道或切换后短暂无人访问，2分钟
+const LONG_TIMEOUT = 600000; // 活跃频道无人访问，10分钟
+
 const streams = new Map<string, Info>();
 const channels: { channel: ''; url: '' }[] = JSON.parse(
   fs.readFileSync(path.resolve('./channels.json'), 'utf-8')?.toString() ?? '[]'
@@ -23,12 +26,66 @@ const channels: { channel: ''; url: '' }[] = JSON.parse(
 
 if (!fs.existsSync(STREAM_DIR)) {
   fs.mkdirSync(STREAM_DIR, { recursive: true });
+} else {
+  fs.readdirSync(STREAM_DIR).forEach((name) => {
+    if (name === '.gitkeep') return;
+    const p = path.join(STREAM_DIR, name);
+    try {
+      // 先尝试当文件删除
+      fs.unlinkSync(p);
+    } catch (err) {
+      // 不是文件则递归删除（目录、符号链接等）
+      try {
+        fs.rmSync(p, { recursive: true, force: true });
+      } catch (e) {
+        console.error('Failed to remove', p, e);
+      }
+    }
+  });
+  if (debug) console.log(`🧹 Cleaned ${STREAM_DIR}`);
 }
 
-app.use(`/${dist}`, express.static(STREAM_DIR));
+// 拦截静态请求：记录访问时间
+app.use(`/${dist}`, (req, res, next) => {
+  // 匹配 /频道名.m3u8 或 /频道名_分片.ts
+  const match = req.path.match(/^\/([^\/_.]+)(?:\.m3u8|_\d+\.ts)$/);
+  if (match) {
+    const channel = match[1];
+    const info = streams.get(channel);
+    if (info) {
+      info.activeTime = Date.now();
+      if (debug)
+        console.log(
+          `[HEARTBEAT] ${channel} at ${new Date().toISOString()} by ${req.path}`
+        );
+    }
+  }
+  next();
+});
+
+app.use(
+  `/${dist}`,
+  (req, res, next) => {
+    // 添加缓存控制
+    res.header('Cache-Control', 'no-cache');
+    // 对m3u8文件特殊处理
+    if (req.path.endsWith('.m3u8')) {
+      res.header('Content-Type', 'application/vnd.apple.mpegurl');
+    }
+    // 对ts文件特殊处理
+    if (req.path.endsWith('.ts')) {
+      res.header('Content-Type', 'video/mp2t');
+    }
+    next();
+  },
+  express.static(STREAM_DIR)
+);
 
 app.get('/api/stream/', async (req, res) => {
-  const { channel } = req.query;
+  let { channel } = req.query;
+  if (typeof channel === 'string') {
+    channel = decodeURIComponent(channel).trim();
+  }
   if (!channel || !channels.find((c) => c.channel === channel)) {
     return res.status(400).send('Invalid channel');
   }
@@ -67,20 +124,27 @@ app.get('/api/stream/', async (req, res) => {
       '-i',
       srcUrl,
       '-c',
-      'copy',
+      'copy', // 保持原编码
       '-f',
       'hls',
       '-hls_time',
-      '5',
+      '2', // 缩短分片时间到2秒
       '-hls_list_size',
-      '5',
+      '10', // 增加列表大小到10
       '-hls_flags',
-      'delete_segments',
-      // 添加 base_url 参数，这样生成的 m3u8 中的 ts 路径会带上这个前缀
+      'delete_segments+append_list', // 添加append_list避免播放器重新加载
+      '-hls_segment_type',
+      'mpegts', // 明确指定分片类型
+      '-hls_init_time',
+      '1', // 初始分片时间
       '-hls_base_url',
       baseUrl,
       '-hls_segment_filename',
       `${STREAM_DIR}/${channelName}_%03d.ts`,
+      '-max_delay',
+      '5000000', // 设置最大延迟
+      '-avoid_negative_ts',
+      '1', // 避免时间戳回退
       `${STREAM_DIR}/${channelName}.m3u8`,
     ];
     // 打印用于调试的 ffmpeg 命令
@@ -132,24 +196,13 @@ app.get('/api/stream/', async (req, res) => {
   return res.redirect(streamUrl);
 });
 
-// 拦截静态请求：记录访问时间
-app.use(`/${dist}`, (req, res, next) => {
-  // 提取频道名
-  const match = req.path.match(/^\/([^_\/]+)(?:_|\.m3u8)/);
-  if (match) {
-    const channel = match[1];
-    const info = streams.get(channel);
-    if (info) {
-      info.activeTime = Date.now();
-    }
-  }
-  next();
-});
-
 setInterval(() => {
   const now = Date.now();
   for (const [channel, info] of streams.entries()) {
-    if (info.activeTime && now - info.activeTime > 60000) {
+    // 频道启动后1分钟内无人访问，快速关闭
+    const timeout =
+      now - info.startTime < SHORT_TIMEOUT ? SHORT_TIMEOUT : LONG_TIMEOUT;
+    if (info.activeTime && now - info.activeTime > timeout) {
       // 超过60秒无人访问
       console.log(`⏹ No viewers for ${channel}, stopping...`);
       info.process.kill('SIGKILL');
@@ -160,7 +213,7 @@ setInterval(() => {
       streams.delete(channel);
     }
   }
-}, 10000);
+}, 30000);
 
 // 在主进程退出或收到信号时，确保清理所有子进程和临时文件
 function cleanupAndExit(code = 0) {
