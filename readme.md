@@ -263,5 +263,14 @@ npm run  exec
 ### docker 一键部署 (轮椅福音)
 
 ```sh
-# Coming soon—stay tuned! 马上更新敬请期待
+## 需要临时设置一个本地目录 用来映射临时转码的文件夹
+## 需要映射一个本地属于你的 节目 channels.json 
+## 端口默认是 7677
+docker run -d \
+  --name iptv-stream \
+  --restart=always \
+  -p 7677:7677 \
+  -v /Users/xxxxx/iptv/output:/usr/src/work_dir/iptv_stream/output \
+  -v /Users/xxxxx/iptv/channels.json:/usr/src/work_dir/iptv_stream/channels.json \
+  zsj439453290/iptv-stream-public:latest
 ```
