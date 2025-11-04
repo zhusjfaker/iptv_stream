@@ -38,14 +38,14 @@ $: opkg install udpxy
 ```
 
 华硕路由器udpxy 截图 仅效果可忽略
-![alt text](img/8.png)
+![alt text](image/8.png)
 
 软路由udpxy 截图 仅效果可忽略
-![alt text](img/1.png)
+![alt text](image/1.png)
 
 
 <b>如何验证： 一旦成功开启udpxy 截图显示如下 (具体安装后的开启方法，请阅后“使用udpxy”文章部分) </b>
-![alt text](img/2.png)
+![alt text](image/2.png)
 
 ----
 
@@ -91,7 +91,7 @@ igmpproxy 这个插件帮我们实现，从路由器里任意一个物理端口�
 
 * 软路由架构图
 
-![alt text](img/3.png)
+![alt text](image/3.png)
 
 ~~~
 软路由描述
@@ -105,7 +105,7 @@ igmpproxy 这个插件帮我们实现，从路由器里任意一个物理端口�
 
 * 家用硬路由架构图
 
-![alt text](img/4.png)
+![alt text](image/4.png)
 
 ~~~
 家用路由描述
@@ -190,7 +190,7 @@ tcpdump -i eth3 -n -vv igmp
 # 回车后一般光标会悬停卡住，没有任何文字输出就是没有数据包过来，也就是没有任何igmp请求发出来。
 ```
 此时打开电视盒子，把频道播放到CCTV1后，2个终端应该会有数据过来。类似如下图展示
-![alt text](img/6.png)
+![alt text](image/6.png)
 <p>
 需要记录这个 228.1.1.28 到 一个txt文件中，同时开启第三个终端输入以下命令
 </p>
@@ -199,11 +199,11 @@ tcpdump -i eth3 -n -vv igmp
 # 观察网桥上发出的 udp 到 228.1.1.28 的请求，为了观察到 具体端口是 图中显示 CCTV1 用的是8008。
 tcpdump -i br-iptv -n "udp and host 228.1.1.28"
 ```
-![alt text](img/7.png)
+![alt text](image/7.png)
 
 家用 路由器 和 笔记本脚本
 
-![alt text](img/5.png)
+![alt text](image/5.png)
 
 <p>
 利用上述教程 把你的 usb网卡适配器A 和 (本地连接 or usb网卡适配器B) 进行网桥，打开电视盒子，在OBS或者电视上观察，电视节目是否正常播放，如果正常播放，打开Wireshark，观察是否有 UDP数据包从这几个物理网口上 流入流出，然后记录当前数据包的 目的地址，即为电视台的网络地址。同时还要记录电视台的地址下的端口号。
@@ -222,7 +222,7 @@ tcpdump -i br-iptv -n "udp and host 228.1.1.28"
 </p>
 
 
-![alt text](img/11.png)
+![alt text](image/11.png)
 
 
 ## 如何额外支持 iphone 和 ipad
