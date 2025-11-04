@@ -261,3 +261,7 @@ npm run  exec
 ```
 
 ### docker 一键部署 (轮椅福音)
+
+```sh
+# Coming soon—stay tuned! 马上更新敬请期待
+```
