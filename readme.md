@@ -211,6 +211,19 @@ tcpdump -i br-iptv -n "udp and host 228.1.1.28"
 
 ## 如何使用 Udpxy 并且扔掉电视盒子
 
+<p>
+  按照“如何获取 电视台片源”的教程不断收集地址，形成如下的电视台列表 “http://192.168.5.1:4022/udp/228.1.1.28:8008”,按照图片格式形成一个“iptv.m3u8” 这个m3u文件，是可以直接给VLC 在 macos|windows|android|linux 上直接播放的。
+</p>
+<p>
+   http://[路由器地址]:[udpxy服务端口，默认4022]/udp/[电视台ipv4地址]:[探测电视地址端口]
+</p>
+<p>
+  iphone 和 ipad 由于苹果的安全限制，无法在 手机的VLC软件上播放对应的m3u的 udpxy 电视节目片源。需要使用 “https://github.com/zhusjfaker/iptv_stream” 部署一个 转码服务器 配合本地的 udpxy 给iphone 和 ipad 提供一个安全本地静态片源。
+</p>
+
+
+![alt text](img/11.png)
+
 
 ## 如何额外支持 iphone 和 ipad
 
